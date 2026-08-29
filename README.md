@@ -32,7 +32,7 @@
 ```bash
 git clone https://github.com/LinOuyang/SymphonicRainReplication.git
 ```
-3. 安装依赖：
+2. 安装依赖：
 
 ```bash
 pip install pygame            # Python 3.10+
