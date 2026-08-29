@@ -16,7 +16,7 @@
 
 ## 🚀 运行方法
 
-### 🪟 Windows（推荐，零配置）
+### 💻 Windows（推荐，零配置）
 
 环境（Python / pygame / ffmpeg / 中文字体 / 全部素材）均已打包：
 
