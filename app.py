@@ -186,9 +186,20 @@ class App:
                 pygame.mixer.music.stop()
                 self.state = 'menu'
                 return
-            if key == pygame.K_SPACE:
+            if key == pygame.K_LEFT:
+                self.scene.seek_by(-SEEK_SECONDS)
+                return
+            if key == pygame.K_RIGHT:
+                self.scene.seek_by(SEEK_SECONDS)
+                return
+            if key == pygame.K_TAB:
                 self.scene.auto_play = not self.scene.auto_play
                 return
+            if key == pygame.K_SPACE:
+                self.scene.toggle_pause()
+                return
+            if self.scene.paused:
+                return      # 暂停期间按键无效
             if self.scene.auto_play:
                 return      # AUTO 期间玩家按键无效
             ch = pygame.key.name(key).lower()
@@ -215,6 +226,8 @@ class App:
     def update(self):
         self.update_bgm()
         if self.state == 'play':
+            if self.scene.paused:
+                return      # 暂停: 时间/音符/判定全部冻结
             now = self.now - self.scene.t0
             self.scene.now = now
             if now >= 0:

@@ -61,7 +61,9 @@ class PlayScene:
         self.lights_small = 0
         self.lights_big = LIGHTS_BIG_START
         self.hit_buffer = []
-        self.auto_play = False        # AUTO 自动演奏(空格切换, 不记分)
+        self.auto_play = False        # AUTO 自动演奏(Tab切换, 不记分)
+        self.paused = False           # 暂停(空格切换): 快照冻结, 恢复=从该秒数重进
+        self.snapshot = None          # 暂停快照: time/score/combo/lights/stats
         self.last_judge = None        # (文本, 颜色)
         self.last_judge_until = 0.0   # 判定特效绝对过期时间
         self.lyric_now = None      # (ja, cn)
@@ -173,7 +175,9 @@ class PlayScene:
         self.lights_small = 0
         self.lights_big = LIGHTS_BIG_START
         self.hit_buffer = []
-        self.auto_play = False        # AUTO 自动演奏(空格切换, 不记分)
+        self.auto_play = False        # AUTO 自动演奏(Tab切换, 不记分)
+        self.paused = False           # 暂停(空格切换): 快照冻结, 恢复=从该秒数重进
+        self.snapshot = None          # 暂停快照: time/score/combo/lights/stats
         self.last_judge = None        # (文本, 颜色)
         self.last_judge_until = 0.0   # 判定特效绝对过期时间
         self.lyric_now = None      # (ja, cn)
@@ -215,6 +219,64 @@ class PlayScene:
             except Exception:
                 self.sounds[name] = None
         return self.sounds[name]
+
+    def save_snapshot(self):
+        """保存当前状态: 时间/得分/连击/亮灯/统计"""
+        return {
+            'time': self.now,
+            'score': self.score,
+            'combo': self.combo,
+            'max_combo': self.max_combo,
+            'perfect_combo': self.perfect_combo,
+            'lights_big': self.lights_big,
+            'lights_small': self.lights_small,
+            'miss_streak': self.miss_streak,
+            'stats': dict(self.stats),
+            'auto_play': self.auto_play,
+        }
+
+    def resume_from(self, sec, snap=None):
+        """从指定秒数重新进入游戏(音乐重载+索引重置);
+        snap 提供时覆盖得分/连击/亮灯等成绩状态"""
+        self.paused = False
+        self.start_time = max(0.0, min(float(sec), self.duration))
+        # 重置音符索引: 跳过该秒数之前已过判定窗口的
+        self.idx = 0
+        while self.idx < len(self.events) and self.events[self.idx][1] < self.start_time - WIN_GOOD:
+            self.idx += 1
+        self.notes_active = []
+        self.hit_buffer = []
+        self.lyric_now = None
+        # 背景事件索引推进到该秒数, 避免重放已触发事件
+        while self.anime_idx < len(self.anime_events) and self.anime_events[self.anime_idx][0] <= self.start_time:
+            self.anime_idx += 1
+        self.start()                            # 重新加载音乐并从该秒数播放
+        self.now = self.start_time
+        if snap:
+            self.score = snap['score']
+            self.combo = snap['combo']
+            self.max_combo = snap['max_combo']
+            self.perfect_combo = snap['perfect_combo']
+            self.lights_big = snap['lights_big']
+            self.lights_small = snap['lights_small']
+            self.miss_streak = snap['miss_streak']
+            self.stats = dict(snap['stats'])
+            self.auto_play = snap['auto_play']
+        self.last_judge = None
+
+    def seek_by(self, delta):
+        """前后跳转 delta 秒, 保留当前成绩"""
+        self.resume_from(self.now + delta, self.save_snapshot())
+
+    def toggle_pause(self):
+        """暂停=快照冻结; 恢复=从该秒数重新进入并覆盖成绩状态"""
+        if not self.paused:
+            self.snapshot = self.save_snapshot()
+            self.paused = True
+            pygame.mixer.music.pause()
+            return
+        snap = self.snapshot
+        self.resume_from(snap['time'], snap)
 
     def start(self):
         # 音乐开局立即启动; 音符延迟 LEAD_TIME 秒出现, 滚动 3 秒到判定区
@@ -568,10 +630,13 @@ class PlayScene:
         cb = self.app.fonts['ui'].render(f"COMBO  {self.combo}", True, COL_TEXT)
         screen.blit(cb, (px, ly + 122))
         # 判定特效文字
-        # AUTO 自动演奏提示(右上角)
+        # 右上角提示: AUTO / 暂停
         if self.auto_play:
             auto = self.app.fonts['auto'].render('AUTO', True, (255, 110, 110))
             screen.blit(auto, (W - auto.get_width() - 100, 84))
+        if self.paused:
+            ps = self.app.fonts['auto'].render('PAUSED', True, (210, 50, 200))
+            screen.blit(ps, (20, 84))
         if self.last_judge and self.now < self.last_judge_until:
             txt, color = self.last_judge
             jr = self.app.fonts['result'].render(txt, True, color)
