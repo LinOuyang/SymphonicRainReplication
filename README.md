@@ -102,7 +102,7 @@ python main.py        # 或 ./run.sh
 
 ---
 
-## ⚙️ Linux 用户：自定义倍速
+## ⚙️ 源码玩家：自定义倍速
 
 倍速档位在 `config.py` 中定义：
 
