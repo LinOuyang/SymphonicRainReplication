@@ -29,7 +29,10 @@
 ### 🐧 Linux
 
 1. 下载源代码（Clone 或 Release 的 Source 包）
-2. 安装依赖：
+```bash
+git clone https://github.com/LinOuyang/SymphonicRainReplication.git
+```
+3. 安装依赖：
 
 ```bash
 pip install pygame            # Python 3.10+
@@ -41,6 +44,7 @@ ffmpeg -encoders | grep mp3lame   # 确认 MP3 编码器可用
 3. 运行：
 
 ```bash
+cd SymphonicRainReplication
 python main.py        # 或 ./run.sh
 ```
 
